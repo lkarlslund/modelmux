@@ -1,0 +1,16 @@
+[Unit]
+Description=ccroute model router for Claude Code
+Documentation=https://github.com/lkarlslund/ccroute
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/go/bin/ccroute -listen 127.0.0.1:8098 -route qwen=http://127.0.0.1:8003,Qwen/Qwen3.8-Flash-Next
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

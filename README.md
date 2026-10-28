@@ -47,6 +47,8 @@ ANTHROPIC_BASE_URL=http://127.0.0.1:8098 claude --agents '{"qwen-worker": {
 
 Claude Code logs `unrecognized_model` for the name and otherwise uses it as given.
 
-Anthropic's server-side checks do not apply to a local model: requests carry a `safeguards` block that the
-Anthropic API uses to vet tool calls in auto mode, and a local server ignores it. Give local subagents
-read-only tools unless you are comfortable with their tool calls going unvetted.
+In auto mode Claude Code asks the Anthropic API for a safety verdict on each proposed tool call (a
+`safeguards` block in the request, `safeguard_results` in the response). A local server returns none, and
+Claude Code fails closed: it falls back to its local checks, or stops the agent with "Auto mode is
+unavailable" after repeated responses without a verdict. Tool calls from a local subagent are not approved
+by default; ones that need a verdict may be refused.

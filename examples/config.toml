@@ -1,0 +1,85 @@
+# ccroute configuration: copy to ~/.config/ccroute/config.toml, edit, then run `ccroute install`.
+#
+# Every [[model]] is a foreign model Claude Code can use. Its `id` is what Claude Code sees: the name in
+# requests, in responses, in /model and in agent files. Everything not listed goes to Anthropic unchanged.
+
+listen = "127.0.0.1:8098"
+# anthropic = "https://api.anthropic.com"   # upstream for every model not listed below
+# dump = "/tmp/ccroute"                     # write each translated request body here (debugging)
+
+# Files with KEY=value lines (API keys) for the systemd user service. Keep keys out of this file.
+env_files = ["~/.config/env.d/ccroute"]
+
+# Extra environment for Claude Code, written to settings.json by install.
+# [env]
+# CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"   # if a foreign server rejects Anthropic beta fields
+
+# A local model on an Anthropic-compatible server (vLLM, SGLang, llama.cpp, quench6k, ...).
+[[model]]
+id = "qwen3.8-flash-next"             # presented to Claude Code
+match = ["qwen*"]                     # other requested names that also route here
+upstream = "http://127.0.0.1:8003"    # Anthropic API base, without /v1
+upstream_model = "Qwen/Qwen3.8-Flash-Next"
+name = "Qwen 3.8 Flash (local)"
+description = "Local model on this machine"
+# behaves_as = "claude-haiku-5-5"     # apply that Claude model's capabilities and effort defaults
+# context = 262144                    # real context window: Claude Code compacts there (minimum 100000)
+# max_tokens = 32768                  # clamp max_tokens if the server rejects Claude Code's default
+# strip = ["thinking", "output_config", "context_management"]  # fields the server rejects
+
+[[agent]]
+name = "qwen-worker"
+model = "qwen3.8-flash-next"
+description = "Fast local Qwen worker for simple, well-specified tasks: searching and reading code or logs, running commands and builds, mechanical edits (renames, small fixes, boilerplate, formatting), writing small files. Give it a self-contained instruction with exact paths, the change wanted, and how to check it."
+disallowed_tools = ["Agent", "ListAgents", "SendMessage"]
+prompt = """
+You are a fast worker. Do exactly the task given, using your tools: read before you edit, keep changes to what was asked, and match the surrounding code's style. When the task names a way to check the result (a build, a test, a command), run it. Finish with a concise report: what you changed (paths and line numbers), what you ran and its outcome, and anything you could not do.
+"""
+# tools = ["Read", "Grep", "Glob", "Bash"]   # default: every subagent tool
+# extra = { color = "cyan", effort = "low" } # any other agent frontmatter key
+
+# ---------------------------------------------------------------------------------------------------------
+# More examples. Provider model names change: use the ones your key can see.
+
+# A hosted provider with an Anthropic-compatible endpoint (DeepSeek, Moonshot/Kimi, Z.ai/GLM, MiniMax, ...).
+# [[model]]
+# id = "deepseek"
+# upstream = "https://api.deepseek.com/anthropic"
+# upstream_model = "deepseek-chat"
+# key_env = "DEEPSEEK_API_KEY"         # sent as x-api-key (auth = "bearer" for Authorization: Bearer)
+# name = "DeepSeek"
+
+# An OpenAI-compatible API (OpenAI, Gemini, OpenRouter, Groq, Ollama, LM Studio, vLLM /v1/chat/completions).
+# Requests and streamed responses, tool calls included, are translated both ways.
+# [[model]]
+# id = "gpt"
+# api = "openai"
+# upstream = "https://api.openai.com/v1"   # OpenAI API base, with /v1
+# upstream_model = "gpt-5-mini"
+# key_env = "OPENAI_API_KEY"               # sent as Authorization: Bearer
+# max_tokens_field = "max_completion_tokens"
+# name = "GPT (OpenAI)"
+# context = 400000
+
+# [[model]]
+# id = "gemini"
+# api = "openai"
+# upstream = "https://generativelanguage.googleapis.com/v1beta/openai"
+# upstream_model = "gemini-2.5-flash"
+# key_env = "GEMINI_API_KEY"
+
+# [[model]]
+# id = "ollama-coder"
+# api = "openai"
+# upstream = "http://127.0.0.1:11434/v1"
+# upstream_model = "qwen3-coder"
+
+# Take over a Claude Code alias: `haiku` (and Claude Code's background tasks, and any agent or Agent tool
+# call that asks for haiku) then runs on this model. Other tiers: sonnet, opus, fable, subagent (the
+# default subagent model), default (the model new sessions start on).
+# [[model]]
+# id = "local-haiku"
+# upstream = "http://127.0.0.1:8003"
+# upstream_model = "Qwen/Qwen3.8-Flash-Next"
+# tier = "haiku"
+# name = "Qwen as Haiku"

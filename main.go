@@ -41,19 +41,19 @@ func main() {
 	case "env":
 		err = printEnv(args)
 	case "help":
-		fmt.Fprintln(os.Stderr, usage)
+		fmt.Fprintln(os.Stderr, usageText)
 	default:
-		err = fmt.Errorf("unknown command %q\n%s", cmd, usage)
+		err = fmt.Errorf("unknown command %q\n%s", cmd, usageText)
 	}
 	if err != nil {
 		log.Fatal("ccroute: ", err)
 	}
 }
 
-const usage = `usage:
+const usageText = `usage:
   ccroute [serve] [-config FILE] [-listen ADDR] [-route PATTERN=UPSTREAM[,MODEL]]... [-dump DIR]
   ccroute install [-config FILE] [-settings FILE] [-agents DIR] [-no-service] [-dry-run]
-  ccroute uninstall [-settings FILE] [-agents DIR] [-no-service]
+  ccroute uninstall [-settings FILE] [-no-service]
   ccroute check [-config FILE] [MODEL_ID]...
   ccroute env [-config FILE]`
 

@@ -53,6 +53,11 @@ func newProxy(cfg *Config) (*proxy, error) {
 			m := resp.Request.Context().Value(modelKey{}).(*Model)
 			return presentModel(resp, m.ID)
 		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			m := r.Context().Value(modelKey{}).(*Model)
+			log.Printf("%s: %v", m.ID, err)
+			apiError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("ccroute: %s at %s: %v", m.ID, m.upstream.Host, err))
+		},
 		FlushInterval: -1,
 	}
 	return p, nil
@@ -138,7 +143,7 @@ func (p *proxy) serveOpenAI(w http.ResponseWriter, r *http.Request, m *Model, bo
 		apiError(w, http.StatusNotFound, "not_found_error", "count_tokens is not available for "+m.ID)
 		return
 	}
-	body, err := limitRequest(body, m)
+	body, err := prepareOpenAI(body, m)
 	if err == nil {
 		body, err = toOpenAI(body, oaOptions{Model: m.UpstreamModel, MaxTokensField: m.MaxTokensKey})
 	}
@@ -401,15 +406,20 @@ func adapt(body []byte, m *Model) ([]byte, error) {
 	return json.Marshal(req)
 }
 
-// limitRequest applies strip and max_tokens to a request that is translated
-// to another API afterwards.
-func limitRequest(body []byte, m *Model) ([]byte, error) {
-	if len(m.Strip) == 0 && m.MaxTokens == 0 {
-		return body, nil
-	}
+// prepareOpenAI folds mid-conversation system messages (many chat templates
+// reject a system message after the first turn), strips configured fields and
+// clamps max_tokens, before the request is translated to Chat Completions.
+func prepareOpenAI(body []byte, m *Model) ([]byte, error) {
 	var req map[string]json.RawMessage
 	if err := json.Unmarshal(body, &req); err != nil {
 		return nil, err
+	}
+	if raw, ok := req["messages"]; ok {
+		msgs, err := foldSystemMessages(raw)
+		if err != nil {
+			return nil, err
+		}
+		req["messages"] = msgs
 	}
 	limit(req, m)
 	return json.Marshal(req)

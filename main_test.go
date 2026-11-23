@@ -273,3 +273,11 @@ func TestRouteFlag(t *testing.T) {
 		t.Errorf("lookup %v, upstream model %q", got, m.UpstreamModel)
 	}
 }
+
+func TestUnreachableUpstreamIsAnAPIError(t *testing.T) {
+	h := newTestProxy(t, &Config{Models: []*Model{{ID: "m", Upstream: "http://127.0.0.1:1"}}})
+	w := post(h, "/v1/messages", `{"model":"m","messages":[]}`)
+	if w.Code != 502 || !strings.Contains(w.Body.String(), `"type":"api_error"`) || !strings.Contains(w.Body.String(), "127.0.0.1:1") {
+		t.Errorf("%d %s", w.Code, w.Body)
+	}
+}

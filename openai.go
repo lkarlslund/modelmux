@@ -20,6 +20,7 @@ import (
 type oaOptions struct {
 	Model          string // model name sent upstream (always set)
 	MaxTokensField string // "max_tokens" (default when empty) or "max_completion_tokens"
+	EffortField    string // upstream field for Claude Code's output_config.effort; empty drops the effort
 }
 
 // ---- Anthropic request shapes (only the fields we translate) ----
@@ -37,6 +38,9 @@ type anRequest struct {
 	Metadata      *struct {
 		UserID string `json:"user_id"`
 	} `json:"metadata"`
+	OutputConfig *struct {
+		Effort string `json:"effort"`
+	} `json:"output_config"`
 }
 
 type anMessage struct {
@@ -196,6 +200,9 @@ func toOpenAI(body []byte, o oaOptions) ([]byte, error) {
 	}
 	if in.Metadata != nil && in.Metadata.UserID != "" {
 		out["user"] = in.Metadata.UserID
+	}
+	if o.EffortField != "" && in.OutputConfig != nil && in.OutputConfig.Effort != "" {
+		out[o.EffortField] = in.OutputConfig.Effort
 	}
 	// Maps marshal with sorted keys and structs in field order, so the same
 	// request always gives the same bytes and upstream prefix caches hit.

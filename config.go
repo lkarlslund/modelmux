@@ -46,6 +46,7 @@ type Model struct {
 	Strip         []string          `toml:"strip"`             // top-level request fields to remove (e.g. "thinking")
 	MaxTokens     int               `toml:"max_tokens"`        // clamp the request's max_tokens to this
 	MaxTokensKey  string            `toml:"max_tokens_field"`  // openai: "max_tokens" (default) or "max_completion_tokens"
+	EffortField   string            `toml:"effort_field"`      // openai: upstream field that gets Claude Code's effort (e.g. "reasoning_effort")
 	KeepServer    bool              `toml:"keep_server_tools"` // keep Anthropic server tools (web search...) for upstreams that run them
 
 	// How Claude Code presents the model.
@@ -119,6 +120,9 @@ func (c *Config) validate() error {
 			errs = append(errs, fmt.Errorf("model %s listed twice", m.ID))
 		}
 		ids[strings.ToLower(m.ID)] = true
+		if m.EffortField != "" && m.API != "openai" {
+			return errors.New("effort_field needs api = \"openai\" (Anthropic upstreams get output_config as is)")
+		}
 		if m.Tier != "" {
 			if prev, ok := usedTier[m.Tier]; ok {
 				errs = append(errs, fmt.Errorf("tier %q set on both %s and %s", m.Tier, prev, m.ID))

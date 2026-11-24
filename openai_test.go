@@ -648,3 +648,29 @@ func TestOpenAIError(t *testing.T) {
 		}
 	}
 }
+
+func TestToOpenAIEffort(t *testing.T) {
+	in := []byte(`{"model":"x","max_tokens":5,"output_config":{"effort":"xhigh"},"messages":[{"role":"user","content":"hi"}]}`)
+	for _, tt := range []struct {
+		field, want, notWant string
+	}{
+		{"reasoning_effort", `"reasoning_effort":"xhigh"`, ""},
+		{"", "", "xhigh"},
+	} {
+		out, err := toOpenAI(in, oaOptions{Model: "m", EffortField: tt.field})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if tt.want != "" && !bytes.Contains(out, []byte(tt.want)) {
+			t.Errorf("field %q: no %s in %s", tt.field, tt.want, out)
+		}
+		if tt.notWant != "" && bytes.Contains(out, []byte(tt.notWant)) {
+			t.Errorf("field %q: %s found in %s", tt.field, tt.notWant, out)
+		}
+	}
+	// No effort in the request: no field upstream (the server default applies).
+	out, _ := toOpenAI([]byte(`{"messages":[]}`), oaOptions{Model: "m", EffortField: "reasoning_effort"})
+	if bytes.Contains(out, []byte("reasoning_effort")) {
+		t.Errorf("effort set without a request effort: %s", out)
+	}
+}

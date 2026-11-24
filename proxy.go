@@ -145,7 +145,7 @@ func (p *proxy) serveOpenAI(w http.ResponseWriter, r *http.Request, m *Model, bo
 	}
 	body, err := prepareOpenAI(body, m)
 	if err == nil {
-		body, err = toOpenAI(body, oaOptions{Model: m.UpstreamModel, MaxTokensField: m.MaxTokensKey})
+		body, err = toOpenAI(body, oaOptions{Model: m.UpstreamModel, MaxTokensField: m.MaxTokensKey, EffortField: m.EffortField})
 	}
 	if err != nil {
 		apiError(w, http.StatusBadRequest, "invalid_request_error", err.Error())

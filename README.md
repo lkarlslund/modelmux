@@ -111,6 +111,7 @@ providers. These keys control what is sent to the model's server:
 | `strip` | top-level request fields to drop, for servers that reject `thinking`, `output_config`, ... |
 | `max_tokens` | clamp the request's `max_tokens` |
 | `max_tokens_field` | for `openai` only: `max_tokens` (default) or `max_completion_tokens` (OpenAI's newer models) |
+| `effort_field` | for `openai` only: the request field that gets Claude Code's effort (`output_config.effort`: `low` ... `max`), for example `reasoning_effort`. Unset: the effort is dropped. Claude Code sends an effort only for models it treats as supporting it, so set `behaves_as` too. |
 | `keep_server_tools` | keep Anthropic server tools (web search, ...) for a server that runs them. They are dropped by default. |
 
 ## How a model is presented to Claude Code
@@ -168,6 +169,7 @@ For `api = "openai"`, requests are also translated:
 - `tool_use` becomes `tool_calls`, and `tool_result` becomes `tool` messages placed directly after the call.
   Images from a tool result follow in a user message, and `is_error` is marked.
 - `tool_choice`, `stop_sequences`, `temperature`, `top_p` and `metadata.user_id` are mapped.
+- The effort (`output_config.effort`) goes to the field named by `effort_field`, when it is set.
 - Thinking blocks are dropped in both directions, because they need signatures.
 
 On the way back:

@@ -58,6 +58,8 @@ You are a fast worker. Do exactly the task given, using your tools: read before 
 # upstream_model = "gpt-5-mini"
 # key_env = "OPENAI_API_KEY"               # sent as Authorization: Bearer
 # max_tokens_field = "max_completion_tokens"
+# effort_field = "reasoning_effort"         # Claude Code's effort (/effort, agent `effort`) sets the reasoning level
+# behaves_as = "claude-opus-5-5"            # so that Claude Code sends an effort at all
 # name = "GPT (OpenAI)"
 # context = 400000
 

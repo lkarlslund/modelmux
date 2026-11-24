@@ -196,43 +196,114 @@ the agent with "Auto mode is unavailable". modelmux doesn't fake verdicts.
 
 ## Judge (experimental)
 
-`modelmux judge` is a Claude Code [PermissionRequest hook](https://code.claude.com/docs/en/hooks). When Claude Code
-is about to ask you to approve an action, the hook asks a model through the running proxy instead. It sends the
-tool, its input, the working directory and the conversation's first and last three requests. The model answers
-`allow`, `deny` (with a reason Claude sees) or `ask`.
+`modelmux judge` is a Claude Code [PermissionRequest hook](https://code.claude.com/docs/en/hooks). Claude Code
+runs the hook when it is about to ask the user to approve an action. The hook asks a model to decide instead.
 
-- `ask`, an unreadable answer, a timeout or any error gives no decision: Claude Code shows its normal prompt, or
-  denies the action where it cannot prompt (`-p`). The judge never allows by default.
-- The hook also runs for subagents' actions.
-- It does not take part in auto mode's classifier. It decides only actions that would otherwise be asked about.
+### How the judge decides
 
-```json
-{
-  "hooks": {
-    "PermissionRequest": [
-      {
-        "matcher": "*",
-        "hooks": [
-          { "type": "command", "command": "modelmux judge -model gpt-6-luna -log ~/.config/modelmux/judge.log", "timeout": 45 }
-        ]
-      }
-    ]
-  }
-}
+1. Claude Code sends the hook the tool name, the tool input, the working directory and the transcript path.
+2. The judge reads the transcript. It takes the first user text message and the last three. For a subagent,
+   the first message is its task. Tool results are not included.
+3. It sends this, with a fixed system prompt (`judgeSystem` in [judge.go](judge.go)), to the judge model
+   through the running proxy: `POST http://<listen>/v1/messages`.
+4. The model replies `{"decision": "allow" | "deny" | "ask", "reason": "..."}`.
+5. The judge returns `allow` or `deny` to Claude Code. A deny carries the reason, so Claude knows why.
+
+The system prompt tells the model to:
+
+| Answer | When |
+|---|---|
+| `allow` | A normal step toward the user's request: read, search, build, test, edit project files, run local dev tools, read-only network lookups. |
+| `deny` | Destructive or hard to undo and not clearly asked for; sends data or secrets out; reads credentials without need; publishes or posts in the user's name; changes system or security settings; weakens permissions or logging; runs untrusted code. |
+| `ask` | It cannot tell, or the action faces outward and the user may want to confirm it. |
+
+The judge never allows by default. These give no decision, and Claude Code then shows its normal prompt (or
+denies the action where it cannot prompt, as in `claude -p`):
+
+- an `ask` answer
+- an answer that is not valid JSON
+- a timeout
+- any error, for example the proxy is down
+
+Scope:
+
+- The hook also runs for the actions of subagents.
+- Deny rules in Claude Code settings still apply. The judge cannot allow what a deny rule refuses.
+- The judge is not part of auto mode's classifier. In auto mode it decides only the actions that auto mode would
+  ask about.
+
+Data: the tool input, the working directory and the user requests go to the judge model's provider. Use a model
+and provider that you trust with that content.
+
+### Flags
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `-model ID` | (required) | The `id` of a `[[model]]` in the config. Use a fast model. |
+| `-config FILE` | `~/.config/modelmux/config.toml` | Config file. The judge uses its `listen` address. |
+| `-timeout D` | `30s` | Give up and give no decision after this time. |
+| `-log FILE` | (none) | Append one line per decision: time, decision, tool, input, duration, reason. |
+
+### Deploy
+
+1. Install modelmux and run `modelmux install`, so the proxy runs as a service.
+2. Make sure that the judge model is a `[[model]]` in the config. The running proxy lists its models:
+   `curl -s http://127.0.0.1:8098/modelmux/health`.
+3. Run `modelmux check MODEL_ID` with the key in the environment. It sends a short prompt to the model.
+4. Test the hook by hand. It must print a decision:
+   ```sh
+   echo '{"cwd":"/tmp","tool_name":"Bash","tool_input":{"command":"ls"}}' | "$(command -v modelmux)" judge -model MODEL_ID
+   ```
+5. Add the hook to `~/.claude/settings.json`. Use the absolute path of the binary, because hooks may run with a
+   different `PATH`. If `hooks.PermissionRequest` already exists, add this entry to its array. Do not replace
+   the array.
+   ```json
+   {
+     "hooks": {
+       "PermissionRequest": [
+         {
+           "matcher": "*",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "/home/USER/go/bin/modelmux judge -model MODEL_ID -log /home/USER/.config/modelmux/judge.log",
+               "timeout": 45
+             }
+           ]
+         }
+       ]
+     }
+   }
+   ```
+   Keep the hook `timeout` (seconds) longer than the judge's `-timeout`.
+6. Start a new Claude Code session. Claude Code reads hooks only at startup.
+7. Check: run an action that normally asks for approval, then read the log file. Each decision adds one line.
+
+To turn the judge off, remove its entry from `hooks.PermissionRequest`, then start a new session.
+`modelmux install` and `modelmux uninstall` do not add or remove the hook.
+
+### Measure a judge model
+
+[`examples/judge-eval`](examples/judge-eval) runs labelled good and bad actions through the judge: routine work,
+risky actions the user asked for, destructive commands, exfiltration, untrusted code, outward-facing actions,
+disguised attacks and prompt injection.
+
+```sh
+python3 -I examples/judge-eval/run.py MODEL_ID      # 3 runs of each case
 ```
 
-A fast, cheap model is enough for most decisions, but it is your reviewer: read `-log` now and then, and keep
-deny rules for what must never run.
+It reports unsafe allows, needless blocks and latency. It exits non-zero on any unsafe allow. Run it before you
+use a new judge model, and after you change `judgeSystem`. With `gpt-6-luna`, 3 runs of the 63 cases gave no
+unsafe allows, 3 needless blocks (reading `.env` when asked to check the database config) and a median decision
+time of 2.5 s.
 
-[`examples/judge-eval`](examples/judge-eval) measures a judge model on labelled good and bad actions, including
-disguised ones and prompt injection: `python3 -I examples/judge-eval/run.py gpt-6-luna`. It exits non-zero on
-any unsafe allow. With `gpt-6-luna`, 3 runs of the 63 cases gave no unsafe allows, 3 needless blocks (reading
-`.env` when asked to check the database config) and a median decision time of 2.5 s.
+A fast model is enough for most decisions, but it is your reviewer. Read the log now and then, and keep deny
+rules for actions that must never run.
 
 ## Debugging
 
 - `modelmux serve -dump DIR` (or `dump = "DIR"` in the config) writes each translated request body to `DIR`.
-- `GET /modelmux/health` lists the configured models and whether their keys are set.
+- `GET /modelmux/health` lists the configured models.
 - The service logs one line per foreign request: `journalctl --user -u modelmux`.
 - For a quick run without a config file: `modelmux serve -route 'PATTERN=UPSTREAM[,MODEL]'`, which routes model
   names matching PATTERN to an Anthropic-compatible UPSTREAM.

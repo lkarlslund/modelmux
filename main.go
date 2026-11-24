@@ -1,15 +1,15 @@
-// ccroute lets Claude Code use foreign models transparently. Point
+// modelmux lets Claude Code use foreign models transparently. Point
 // ANTHROPIC_BASE_URL at it: Messages API requests for a model listed in the
 // config go to that model's server (Anthropic- or OpenAI-compatible) under the
 // name Claude Code knows it by; everything else is passed through to
 // api.anthropic.com byte for byte, with the client's own headers and
 // credentials.
 //
-//	ccroute [serve] [-config FILE]     run the proxy
-//	ccroute install [-config FILE]     set up Claude Code, agents and the user service from the config
-//	ccroute uninstall                  undo install
-//	ccroute check [-config FILE] [ID]  send a one-line prompt to each model through the proxy logic
-//	ccroute env [-config FILE]         print the environment install would put in settings.json
+//	modelmux [serve] [-config FILE]     run the proxy
+//	modelmux install [-config FILE]     set up Claude Code, agents and the user service from the config
+//	modelmux uninstall                  undo install
+//	modelmux check [-config FILE] [ID]  send a one-line prompt to each model through the proxy logic
+//	modelmux env [-config FILE]         print the environment install would put in settings.json
 package main
 
 import (
@@ -46,16 +46,16 @@ func main() {
 		err = fmt.Errorf("unknown command %q\n%s", cmd, usageText)
 	}
 	if err != nil {
-		log.Fatal("ccroute: ", err)
+		log.Fatal("modelmux: ", err)
 	}
 }
 
 const usageText = `usage:
-  ccroute [serve] [-config FILE] [-listen ADDR] [-route PATTERN=UPSTREAM[,MODEL]]... [-dump DIR]
-  ccroute install [-config FILE] [-settings FILE] [-agents DIR] [-no-service] [-dry-run]
-  ccroute uninstall [-settings FILE] [-no-service]
-  ccroute check [-config FILE] [MODEL_ID]...
-  ccroute env [-config FILE]`
+  modelmux [serve] [-config FILE] [-listen ADDR] [-route PATTERN=UPSTREAM[,MODEL]]... [-dump DIR]
+  modelmux install [-config FILE] [-settings FILE] [-agents DIR] [-no-service] [-dry-run]
+  modelmux uninstall [-settings FILE] [-no-service]
+  modelmux check [-config FILE] [MODEL_ID]...
+  modelmux env [-config FILE]`
 
 func serve(args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)

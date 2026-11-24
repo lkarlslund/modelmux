@@ -1,27 +1,27 @@
-# ccroute configuration: copy to ~/.config/ccroute/config.toml, edit, then run `ccroute install`.
+# modelmux configuration: copy to ~/.config/modelmux/config.toml, edit, then run `modelmux install`.
 #
 # Every [[model]] is a foreign model Claude Code can use. Its `id` is what Claude Code sees: the name in
 # requests, in responses, in /model and in agent files. Everything not listed goes to Anthropic unchanged.
 
 listen = "127.0.0.1:8098"
 # anthropic = "https://api.anthropic.com"   # upstream for every model not listed below
-# dump = "/tmp/ccroute"                     # write each translated request body here (debugging)
+# dump = "/tmp/modelmux"                     # write each translated request body here (debugging)
 
 # Files with KEY=value lines (API keys) for the systemd user service. Keep keys out of this file.
-env_files = ["~/.config/env.d/ccroute"]
+env_files = ["~/.config/modelmux/keys.env"]  # chmod 600
 
 # Extra environment for Claude Code, written to settings.json by install.
 # [env]
 # CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"   # if a foreign server rejects Anthropic beta fields
 
-# A local model on an Anthropic-compatible server (vLLM, SGLang, llama.cpp, quench6k, ...).
+# A local model on an Anthropic-compatible server (vLLM, SGLang, llama.cpp, ...).
 [[model]]
 id = "qwen3.8-flash-next"             # presented to Claude Code
 match = ["qwen*"]                     # other requested names that also route here
 upstream = "http://127.0.0.1:8003"    # Anthropic API base, without /v1
 upstream_model = "Qwen/Qwen3.8-Flash-Next"
 name = "Qwen 3.8 Flash (local)"
-description = "Local model on this machine"
+description = "Local model"
 # behaves_as = "claude-haiku-5-5"     # apply that Claude model's capabilities and effort defaults
 # context = 262144                    # real context window: Claude Code compacts there (minimum 100000)
 # max_tokens = 32768                  # clamp max_tokens if the server rejects Claude Code's default

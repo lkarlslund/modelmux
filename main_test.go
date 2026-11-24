@@ -102,7 +102,7 @@ func TestOtherPathsPassThrough(t *testing.T) {
 
 func TestHealthIsLocal(t *testing.T) {
 	h, anthropic, _ := setup(t)
-	req := httptest.NewRequest(http.MethodGet, "/ccroute/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/modelmux/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "qwen3.8-flash-next") || anthropic.path != "" {

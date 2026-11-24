@@ -1,4 +1,4 @@
-module github.com/lkarlslund/ccroute
+module github.com/lkarlslund/modelmux
 
 go 1.27.3
 

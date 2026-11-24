@@ -13,9 +13,9 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// Config is the ccroute configuration file (TOML). One file describes both
+// Config is the modelmux configuration file (TOML). One file describes both
 // the proxy (which models go where) and how they are presented to Claude Code
-// (picker rows, alias tiers, subagents), so `ccroute install` can set up the
+// (picker rows, alias tiers, subagents), so `modelmux install` can set up the
 // client side from the same source.
 type Config struct {
 	Listen    string   `toml:"listen"`    // proxy address, default 127.0.0.1:8098
@@ -83,7 +83,7 @@ var agentName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
 func defaultConfigPath() string {
 	if d, err := os.UserConfigDir(); err == nil {
-		return filepath.Join(d, "ccroute", "config.toml")
+		return filepath.Join(d, "modelmux", "config.toml")
 	}
 	return "config.toml"
 }

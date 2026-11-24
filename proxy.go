@@ -56,7 +56,7 @@ func newProxy(cfg *Config) (*proxy, error) {
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			m := r.Context().Value(modelKey{}).(*Model)
 			log.Printf("%s: %v", m.ID, err)
-			apiError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("ccroute: %s at %s: %v", m.ID, m.upstream.Host, err))
+			apiError(w, http.StatusBadGateway, "api_error", fmt.Sprintf("modelmux: %s at %s: %v", m.ID, m.upstream.Host, err))
 		},
 		FlushInterval: -1,
 	}
@@ -82,7 +82,7 @@ func setUpstreamHeaders(h http.Header, m *Model) {
 }
 
 func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/ccroute/health" {
+	if r.URL.Path == "/modelmux/health" {
 		p.health(w)
 		return
 	}
@@ -113,7 +113,7 @@ func (p *proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := m.key(); err != nil {
-		apiError(w, http.StatusInternalServerError, "api_error", "ccroute: "+err.Error())
+		apiError(w, http.StatusInternalServerError, "api_error", "modelmux: "+err.Error())
 		return
 	}
 	countTokens := strings.HasSuffix(r.URL.Path, "/count_tokens")
@@ -165,7 +165,7 @@ func (p *proxy) serveOpenAI(w http.ResponseWriter, r *http.Request, m *Model, bo
 	setUpstreamHeaders(req.Header, m)
 	resp, err := p.client.Do(req)
 	if err != nil {
-		apiError(w, http.StatusBadGateway, "api_error", "ccroute: "+err.Error())
+		apiError(w, http.StatusBadGateway, "api_error", "modelmux: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
@@ -189,7 +189,7 @@ func (p *proxy) serveOpenAI(w http.ResponseWriter, r *http.Request, m *Model, bo
 		b, err = fromOpenAI(b, m.ID)
 	}
 	if err != nil {
-		apiError(w, http.StatusBadGateway, "api_error", "ccroute: upstream response: "+err.Error())
+		apiError(w, http.StatusBadGateway, "api_error", "modelmux: upstream response: "+err.Error())
 		return
 	}
 	if stream {

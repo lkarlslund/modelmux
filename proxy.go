@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -145,7 +147,10 @@ func (p *proxy) serveOpenAI(w http.ResponseWriter, r *http.Request, m *Model, bo
 	}
 	body, err := prepareOpenAI(body, m)
 	if err == nil {
-		body, err = toOpenAI(body, oaOptions{Model: m.UpstreamModel, MaxTokensField: m.MaxTokensKey, EffortField: m.EffortField})
+		body, err = toOpenAI(body, oaOptions{
+			Model: m.UpstreamModel, MaxTokensField: m.MaxTokensKey, EffortField: m.EffortField,
+			CacheKeyField: m.CacheKeyField, CacheKey: cacheKey(r.Header),
+		})
 	}
 	if err != nil {
 		apiError(w, http.StatusBadRequest, "invalid_request_error", err.Error())
@@ -404,6 +409,18 @@ func adapt(body []byte, m *Model) ([]byte, error) {
 	}
 	limit(req, m)
 	return json.Marshal(req)
+}
+
+// cacheKey names one conversation: the Claude Code session and, for a subagent, its
+// agent. It is a hash, so the session and agent IDs do not leave the machine.
+// Without a session ID there is no key.
+func cacheKey(h http.Header) string {
+	s := h.Get("X-Claude-Code-Session-Id")
+	if s == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(s + "\x00" + h.Get("X-Claude-Code-Agent-Id")))
+	return "modelmux-" + hex.EncodeToString(sum[:12])
 }
 
 // prepareOpenAI folds mid-conversation system messages (many chat templates

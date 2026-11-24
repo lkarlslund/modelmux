@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -672,5 +673,36 @@ func TestToOpenAIEffort(t *testing.T) {
 	out, _ := toOpenAI([]byte(`{"messages":[]}`), oaOptions{Model: "m", EffortField: "reasoning_effort"})
 	if bytes.Contains(out, []byte("reasoning_effort")) {
 		t.Errorf("effort set without a request effort: %s", out)
+	}
+}
+
+func TestToOpenAICacheKey(t *testing.T) {
+	in := []byte(`{"messages":[{"role":"user","content":"hi"}]}`)
+	out, err := toOpenAI(in, oaOptions{Model: "m", CacheKeyField: "prompt_cache_key", CacheKey: "k1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(out, []byte(`"prompt_cache_key":"k1"`)) {
+		t.Errorf("no cache key: %s", out)
+	}
+	out, _ = toOpenAI(in, oaOptions{Model: "m", CacheKeyField: "prompt_cache_key"})
+	if bytes.Contains(out, []byte("prompt_cache_key")) {
+		t.Errorf("cache key without a key: %s", out)
+	}
+}
+
+func TestCacheKey(t *testing.T) {
+	h := http.Header{}
+	if cacheKey(h) != "" {
+		t.Error("key without a session")
+	}
+	h.Set("X-Claude-Code-Session-Id", "sess-1")
+	main := cacheKey(h)
+	if main != cacheKey(h) || strings.Contains(main, "sess-1") {
+		t.Errorf("key %q: not stable or not hashed", main)
+	}
+	h.Set("X-Claude-Code-Agent-Id", "agent-1")
+	if cacheKey(h) == main {
+		t.Error("subagent shares the main session's key")
 	}
 }

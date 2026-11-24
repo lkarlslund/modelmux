@@ -21,6 +21,8 @@ type oaOptions struct {
 	Model          string // model name sent upstream (always set)
 	MaxTokensField string // "max_tokens" (default when empty) or "max_completion_tokens"
 	EffortField    string // upstream field for Claude Code's output_config.effort; empty drops the effort
+	CacheKeyField  string // upstream field for CacheKey (e.g. "prompt_cache_key"); empty sends none
+	CacheKey       string // stable key for one conversation, so the server reuses its prompt cache
 }
 
 // ---- Anthropic request shapes (only the fields we translate) ----
@@ -200,6 +202,9 @@ func toOpenAI(body []byte, o oaOptions) ([]byte, error) {
 	}
 	if in.Metadata != nil && in.Metadata.UserID != "" {
 		out["user"] = in.Metadata.UserID
+	}
+	if o.CacheKeyField != "" && o.CacheKey != "" {
+		out[o.CacheKeyField] = o.CacheKey
 	}
 	if o.EffortField != "" && in.OutputConfig != nil && in.OutputConfig.Effort != "" {
 		out[o.EffortField] = in.OutputConfig.Effort

@@ -47,6 +47,7 @@ type Model struct {
 	MaxTokens     int               `toml:"max_tokens"`        // clamp the request's max_tokens to this
 	MaxTokensKey  string            `toml:"max_tokens_field"`  // openai: "max_tokens" (default) or "max_completion_tokens"
 	EffortField   string            `toml:"effort_field"`      // openai: upstream field that gets Claude Code's effort (e.g. "reasoning_effort")
+	CacheKeyField string            `toml:"cache_key_field"`   // openai: upstream field that gets a per-conversation cache key (e.g. "prompt_cache_key")
 	KeepServer    bool              `toml:"keep_server_tools"` // keep Anthropic server tools (web search...) for upstreams that run them
 
 	// How Claude Code presents the model.
@@ -120,6 +121,9 @@ func (c *Config) validate() error {
 			errs = append(errs, fmt.Errorf("model %s listed twice", m.ID))
 		}
 		ids[strings.ToLower(m.ID)] = true
+		if m.CacheKeyField != "" && m.API != "openai" {
+			return errors.New("cache_key_field needs api = \"openai\"")
+		}
 		if m.EffortField != "" && m.API != "openai" {
 			return errors.New("effort_field needs api = \"openai\" (Anthropic upstreams get output_config as is)")
 		}

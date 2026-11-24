@@ -224,6 +224,11 @@ tool, its input, the working directory and the conversation's first and last thr
 A fast, cheap model is enough for most decisions, but it is your reviewer: read `-log` now and then, and keep
 deny rules for what must never run.
 
+[`examples/judge-eval`](examples/judge-eval) measures a judge model on labelled good and bad actions, including
+disguised ones and prompt injection: `python3 -I examples/judge-eval/run.py gpt-6-luna`. It exits non-zero on
+any unsafe allow. With `gpt-6-luna`, 3 runs of the 63 cases gave no unsafe allows, 3 needless blocks (reading
+`.env` when asked to check the database config) and a median decision time of 2.5 s.
+
 ## Debugging
 
 - `modelmux serve -dump DIR` (or `dump = "DIR"` in the config) writes each translated request body to `DIR`.

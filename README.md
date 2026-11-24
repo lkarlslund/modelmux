@@ -194,6 +194,36 @@ block in the request, and `safeguard_results` in the response. A foreign server 
 Code fails closed. It falls back to its local checks, or after repeated responses without a verdict it stops
 the agent with "Auto mode is unavailable". modelmux doesn't fake verdicts.
 
+## Judge (experimental)
+
+`modelmux judge` is a Claude Code [PermissionRequest hook](https://code.claude.com/docs/en/hooks). When Claude Code
+is about to ask you to approve an action, the hook asks a model through the running proxy instead. It sends the
+tool, its input, the working directory and the conversation's first and last three requests. The model answers
+`allow`, `deny` (with a reason Claude sees) or `ask`.
+
+- `ask`, an unreadable answer, a timeout or any error gives no decision: Claude Code shows its normal prompt, or
+  denies the action where it cannot prompt (`-p`). The judge never allows by default.
+- The hook also runs for subagents' actions.
+- It does not take part in auto mode's classifier. It decides only actions that would otherwise be asked about.
+
+```json
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "modelmux judge -model gpt-6-luna -log ~/.config/modelmux/judge.log", "timeout": 45 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+A fast, cheap model is enough for most decisions, but it is your reviewer: read `-log` now and then, and keep
+deny rules for what must never run.
+
 ## Debugging
 
 - `modelmux serve -dump DIR` (or `dump = "DIR"` in the config) writes each translated request body to `DIR`.

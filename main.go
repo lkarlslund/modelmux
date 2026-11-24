@@ -40,6 +40,8 @@ func main() {
 		err = check(args)
 	case "env":
 		err = printEnv(args)
+	case "judge":
+		err = judge(args)
 	case "help":
 		fmt.Fprintln(os.Stderr, usageText)
 	default:
@@ -55,7 +57,8 @@ const usageText = `usage:
   modelmux install [-config FILE] [-settings FILE] [-agents DIR] [-no-service] [-dry-run]
   modelmux uninstall [-settings FILE] [-no-service]
   modelmux check [-config FILE] [MODEL_ID]...
-  modelmux env [-config FILE]`
+  modelmux env [-config FILE]
+  modelmux judge -model ID [-config FILE] [-timeout D] [-log FILE]   (a Claude Code PermissionRequest hook)`
 
 func serve(args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
